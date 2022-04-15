@@ -58,7 +58,12 @@ contract EverLand is ERC721Enumerable, Ownable {
             1588085682360 *
             (10**12)) / uint256(1586020149070416559561266);
 
-    constructor() ERC721("Eever", "EEVER") {}
+    constructor() ERC721("Eever", "EEVER") {
+        for (uint256 i = 0; i < 10; i++) {
+            Counters.Counter memory temp;
+            m_LandCounter.push(temp);
+        }
+    }
 
     function _beforeTokenTransfer(
         address from,
@@ -89,10 +94,6 @@ contract EverLand is ERC721Enumerable, Ownable {
         require(
             _countOfLands > 0 && _countOfLands <= MAX_PURCHASE,
             "Can only mint 200 tokens at a time"
-        );
-        require(
-            totalSupply().add(_countOfLands) <= MAX_SUPPLY,
-            "Purchase would exceed max supply of Lands"
         );
         // uint256 gaiaUSDC = getTokenPrice();
         uint256 price = _landType == 1
@@ -255,15 +256,15 @@ contract EverLand is ERC721Enumerable, Ownable {
 
     function _validateIdOfLand(uint256 _id) private pure returns (bool) {
         return
-            (_id > 900000 && _id <= 900020) &&
-            (_id > 800000 && _id <= 800032) &&
-            (_id > 700000 && _id <= 700070) &&
-            (_id > 600000 && _id <= 600130) &&
-            (_id > 500000 && _id <= 500270) &&
-            (_id > 400000 && _id <= 400540) &&
-            (_id > 300000 && _id <= 301080) &&
-            (_id > 200000 && _id <= 202170) &&
-            (_id > 100000 && _id <= 138960) &&
+            (_id > 900000 && _id <= 900020) ||
+            (_id > 800000 && _id <= 800032) ||
+            (_id > 700000 && _id <= 700070) ||
+            (_id > 600000 && _id <= 600130) ||
+            (_id > 500000 && _id <= 500270) ||
+            (_id > 400000 && _id <= 400540) ||
+            (_id > 300000 && _id <= 301080) ||
+            (_id > 200000 && _id <= 202170) ||
+            (_id > 100000 && _id <= 138960) ||
             (_id > 0 && _id <= 81612);
     }
 
@@ -274,7 +275,7 @@ contract EverLand is ERC721Enumerable, Ownable {
     ) external {
         require(m_IsMintable, "Sale must be active to mint GaiaLand");
         require(ownerOf(_id) == msg.sender, "sender is not owner");
-        require(m_Auctions[_id].creator != msg.sender, "Already opened");
+        require(m_Auctions[_id].id != _id, "Already opened");
         m_Auctions[_id] = Auction({
             price: _price,
             unit: _unit,
@@ -286,18 +287,19 @@ contract EverLand is ERC721Enumerable, Ownable {
     function closeTrade(uint256 _id) external {
         require(m_IsMintable, "Sale must be active to mint GaiaLand");
         require(ownerOf(_id) == msg.sender, "sender is not owner");
-        require(m_Auctions[_id].creator == msg.sender, "Already closed");
+        require(m_Auctions[_id].id == _id, "Already closed");
         delete m_Auctions[_id];
     }
 
     function buy(uint256 _id) external payable {
         require(m_IsMintable, "Sale must be active to mint GaiaLand");
-        _validate(_id);
-        require(m_Auctions[_id].creator == msg.sender, "Already closed");
+        require(ownerOf(_id) != msg.sender, "Can not buy what you own");
+        require(m_Auctions[_id].id == _id, "Item not listed currently");
         require(
             m_Auctions[_id].price <= msg.value,
             "Error, price is not match"
         );
+        require(m_Auctions[_id].unit == 2, "Error, unit is not match");
         address _previousOwner = m_Auctions[_id].creator;
         address _newOwner = msg.sender;
 
@@ -312,9 +314,10 @@ contract EverLand is ERC721Enumerable, Ownable {
 
     function buyToken(uint256 _id, uint256 _price) external {
         require(m_IsMintable, "Sale must be active to mint GaiaLand");
-        _validate(_id);
-        require(m_Auctions[_id].creator == msg.sender, "Already closed");
+        require(ownerOf(_id) != msg.sender, "Can not buy what you own");
+        require(m_Auctions[_id].id == _id, "Item not listed currently");
         require(m_Auctions[_id].price <= _price, "Error, price is not match");
+        require(m_Auctions[_id].unit == 1, "Error, unit is not match");
         address _previousOwner = m_Auctions[_id].creator;
         address _newOwner = msg.sender;
 
@@ -338,24 +341,6 @@ contract EverLand is ERC721Enumerable, Ownable {
 
         _transfer(_previousOwner, _newOwner, _id);
         delete m_Auctions[_id];
-    }
-
-    function transferLand(uint256 _id, address _to) external {
-        require(m_IsMintable, "Sale must be active to mint GaiaLand");
-        require(_to != address(0), "Can not send to address(0)");
-        require(ownerOf(_id) == msg.sender, "sender is not owner");
-        if (m_Auctions[_id].creator == msg.sender) {
-            delete m_Auctions[_id];
-        }
-        transferFrom(msg.sender, _to, _id);
-    }
-
-    function _validate(uint256 _id) internal view {
-        require(
-            m_Auctions[_id].creator == msg.sender,
-            "Item not listed currently"
-        );
-        require(msg.sender != ownerOf(_id), "Can not buy what you own");
     }
 
     // ######## EverLand Config #########
