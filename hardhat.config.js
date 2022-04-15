@@ -22,7 +22,15 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
  * @type import('hardhat/config').HardhatUserConfig
  */
 module.exports = {
-  solidity: "0.8.9",
+  solidity: {
+    version: "0.8.9",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200,
+      },
+    },
+  },
   networks: {
     // ropsten: {
     //   url: process.env.ROPSTEN_URL || "",
@@ -51,7 +59,7 @@ module.exports = {
     currency: "USD",
   },
   etherscan: {
-    apiKey: process.env.POLY_API_KEY,
+    apiKey: process.env.POLYGONSCAN_API_KEY,
     // apiKey: process.env.ETHERSCAN_API_KEY,
   },
 };

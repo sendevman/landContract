@@ -34,7 +34,7 @@ contract EverLand is ERC721Enumerable, Ownable {
 
     struct Auction {
         uint256 price;
-        string unit;
+        uint256 unit;
         uint32 id;
         address creator;
     }
@@ -45,7 +45,7 @@ contract EverLand is ERC721Enumerable, Ownable {
     }
 
     struct validateLand {
-        string landType;
+        uint256 landType;
         uint256 landSize;
     }
 
@@ -66,6 +66,9 @@ contract EverLand is ERC721Enumerable, Ownable {
         uint256 tokenId
     ) internal override {
         super._beforeTokenTransfer(from, to, tokenId);
+        if (from != address(0) && m_Auctions[tokenId].creator == from) {
+            delete m_Auctions[tokenId];
+        }
     }
 
     function withdraw() public onlyOwner {
@@ -91,8 +94,15 @@ contract EverLand is ERC721Enumerable, Ownable {
             totalSupply().add(_countOfLands) <= MAX_SUPPLY,
             "Purchase would exceed max supply of Lands"
         );
-        uint256 countOfLands = 0;
+        // uint256 gaiaUSDC = getTokenPrice();
+        uint256 price = _landType == 1
+            ? ((m_EpicPrice * _countOfLands * _landSize * _landSize) *
+                (10**36)) / gaiaUSDC
+            : ((m_RegularPrice * _countOfLands * _landSize * _landSize) *
+                (10**36)) / gaiaUSDC;
+        require(IERC20(PGAIAA).transferFrom(msg.sender, address(this), price));
         while (_countOfLands > 0) {
+            m_LandCounter[_landSize * 2 + _landType].increment();
             uint256 tokenId = generateTokenId(
                 m_LandCounter[_landSize * 2 + _landType].current(),
                 _landSize,
@@ -100,22 +110,11 @@ contract EverLand is ERC721Enumerable, Ownable {
             );
 
             require(_validateIdOfLand(tokenId), "No Land Id");
-            if (_exists(tokenId)) {
-                m_LandCounter[_landSize * 2 + _landType].increment();
-                continue;
-            }
+            if (_exists(tokenId)) continue;
 
-            // require(tokenId <= MAX_SUPPLY);
             _safeMint(msg.sender, tokenId);
-            countOfLands = countOfLands + _landSize * _landSize;
             _countOfLands = _countOfLands.sub(1);
         }
-        // uint256 gaiaUSDC = getTokenPrice();
-        uint256 price = keccak256(abi.encodePacked((_landType))) ==
-            keccak256(abi.encodePacked(("epic")))
-            ? ((m_EpicPrice * countOfLands) * (10**36)) / gaiaUSDC
-            : ((m_RegularPrice * countOfLands) * (10**36)) / gaiaUSDC;
-        require(IERC20(PGAIAA).transferFrom(msg.sender, address(this), price));
     }
 
     function selectedMint(
@@ -143,18 +142,11 @@ contract EverLand is ERC721Enumerable, Ownable {
             require(_validateIdOfLand(_ids[i]), "No Land Id");
             require(_exists(_ids[i]) == false, "Lands were already minted");
         }
-        require(
-            totalSupply().add(_countOfLands) <= MAX_SUPPLY,
-            "Purchase would exceed max supply of Lands"
-        );
         uint256 epicLands = 0;
         uint256 regularLands = 0;
         for (uint256 i = 0; i < _countOfLands; i++) {
             validateLand memory data = _validateTypeOfLand(_ids[i]);
-            if (
-                keccak256(abi.encodePacked((data.landType))) ==
-                keccak256(abi.encodePacked(("epic")))
-            ) {
+            if (data.landType == 1) {
                 epicLands = epicLands + data.landSize * data.landSize;
             } else {
                 regularLands = epicLands + data.landSize * data.landSize;
@@ -188,8 +180,8 @@ contract EverLand is ERC721Enumerable, Ownable {
 
     function generateTokenId(
         uint256 _id,
-        uint256 _landSize,
-        uint256 _landType
+        uint256 _landSize, // 1 x 1: 0, 3 x 3: 1, ..., 24 x 24: 4
+        uint256 _landType // epic 1, regular 0
     ) private pure returns (uint256) {
         return (_landSize * 2 + _landType) * 100000 + _id;
     }
@@ -227,35 +219,35 @@ contract EverLand is ERC721Enumerable, Ownable {
         returns (validateLand memory)
     {
         validateLand memory data;
-        if (_id >= 510000 && _id <= 510019) {
-            data.landType = "epic";
+        if (_id > 900000 && _id <= 900020) {
+            data.landType = 1;
             data.landSize = 24;
-        } else if (_id >= 500000 && _id <= 500031) {
-            data.landType = "regular";
+        } else if (_id > 800000 && _id <= 800032) {
+            data.landType = 0;
             data.landSize = 24;
-        } else if (_id >= 410000 && _id <= 410069) {
-            data.landType = "epic";
+        } else if (_id > 700000 && _id <= 700070) {
+            data.landType = 1;
             data.landSize = 12;
-        } else if (_id >= 400000 && _id <= 400129) {
-            data.landType = "regular";
+        } else if (_id > 600000 && _id <= 600130) {
+            data.landType = 0;
             data.landSize = 12;
-        } else if (_id >= 310000 && _id <= 310269) {
-            data.landType = "epic";
+        } else if (_id > 500000 && _id <= 500270) {
+            data.landType = 1;
             data.landSize = 6;
-        } else if (_id >= 300000 && _id <= 300539) {
-            data.landType = "regular";
+        } else if (_id > 400000 && _id <= 400540) {
+            data.landType = 0;
             data.landSize = 6;
-        } else if (_id >= 210000 && _id <= 211079) {
-            data.landType = "epic";
+        } else if (_id > 300000 && _id <= 301080) {
+            data.landType = 1;
             data.landSize = 3;
-        } else if (_id >= 200000 && _id <= 202169) {
-            data.landType = "regular";
+        } else if (_id > 200000 && _id <= 202170) {
+            data.landType = 0;
             data.landSize = 3;
-        } else if (_id >= 100000 && _id <= 138959) {
-            data.landType = "epic";
+        } else if (_id > 100000 && _id <= 138960) {
+            data.landType = 1;
             data.landSize = 1;
-        } else if (_id >= 0 && _id <= 81611) {
-            data.landType = "regular";
+        } else if (_id > 0 && _id <= 81612) {
+            data.landType = 0;
             data.landSize = 1;
         }
         return data;
@@ -263,22 +255,22 @@ contract EverLand is ERC721Enumerable, Ownable {
 
     function _validateIdOfLand(uint256 _id) private pure returns (bool) {
         return
-            (_id >= 510000 && _id <= 510019) &&
-            (_id >= 500000 && _id <= 500031) &&
-            (_id >= 410000 && _id <= 410069) &&
-            (_id >= 400000 && _id <= 400129) &&
-            (_id >= 310000 && _id <= 310269) &&
-            (_id >= 300000 && _id <= 300539) &&
-            (_id >= 210000 && _id <= 211079) &&
-            (_id >= 200000 && _id <= 202169) &&
-            (_id >= 100000 && _id <= 138959) &&
-            (_id >= 0 && _id <= 81611);
+            (_id > 900000 && _id <= 900020) &&
+            (_id > 800000 && _id <= 800032) &&
+            (_id > 700000 && _id <= 700070) &&
+            (_id > 600000 && _id <= 600130) &&
+            (_id > 500000 && _id <= 500270) &&
+            (_id > 400000 && _id <= 400540) &&
+            (_id > 300000 && _id <= 301080) &&
+            (_id > 200000 && _id <= 202170) &&
+            (_id > 100000 && _id <= 138960) &&
+            (_id > 0 && _id <= 81612);
     }
 
     function openTrade(
         uint32 _id,
         uint256 _price,
-        string memory _unit
+        uint256 _unit
     ) external {
         require(m_IsMintable, "Sale must be active to mint GaiaLand");
         require(ownerOf(_id) == msg.sender, "sender is not owner");
