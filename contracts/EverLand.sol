@@ -53,6 +53,7 @@ contract EverLand is ERC721Enumerable, Ownable {
 
     mapping(uint256 => Auction) private m_Auctions;
     mapping(address => WhiteListAmounts) public m_WhiteListAmounts;
+    mapping(uint256 => bool) private m_BurnList;
 
     uint256 private gaiaUSDC =
         (((79357452196816930849001 * (10**18)) /
@@ -86,6 +87,37 @@ contract EverLand is ERC721Enumerable, Ownable {
         IERC20(PGAIAA).transfer(msg.sender, gaiaBalance);
     }
 
+    function _safeMintMultiple(
+        address _address,
+        uint256 _countOfLands,
+        uint256 _landSize,
+        uint256 _landType
+    ) private {
+        while (_countOfLands > 0) {
+            m_LandCounter[_landSize * 2 + _landType].increment();
+            uint256 tokenId = generateTokenId(
+                m_LandCounter[_landSize * 2 + _landType].current(),
+                _landSize,
+                _landType
+            );
+
+            require(_validateIdOfLand(tokenId), "No Land Id");
+            if (_exists(tokenId) || m_BurnList[tokenId]) continue;
+
+            _safeMint(_address, tokenId);
+            _countOfLands = _countOfLands.sub(1);
+        }
+    }
+
+    function randomReserve(
+        address _address,
+        uint256 _countOfLands,
+        uint256 _landSize,
+        uint256 _landType
+    ) external onlyOwner {
+        _safeMintMultiple(_address, _countOfLands, _landSize, _landType);
+    }
+
     function mint(
         uint256 _countOfLands,
         uint256 _landSize,
@@ -104,20 +136,7 @@ contract EverLand is ERC721Enumerable, Ownable {
             : ((m_RegularPrice * _countOfLands * _landSize * _landSize) *
                 (10**36)) / gaiaUSDC;
         require(IERC20(PGAIAA).transferFrom(msg.sender, address(this), price));
-        while (_countOfLands > 0) {
-            m_LandCounter[_landSize * 2 + _landType].increment();
-            uint256 tokenId = generateTokenId(
-                m_LandCounter[_landSize * 2 + _landType].current(),
-                _landSize,
-                _landType
-            );
-
-            require(_validateIdOfLand(tokenId), "No Land Id");
-            if (_exists(tokenId)) continue;
-
-            _safeMint(msg.sender, tokenId);
-            _countOfLands = _countOfLands.sub(1);
-        }
+        _safeMintMultiple(msg.sender, _countOfLands, _landSize, _landType);
     }
 
     function selectedMint(
@@ -343,6 +362,24 @@ contract EverLand is ERC721Enumerable, Ownable {
 
         _transfer(_previousOwner, _newOwner, _id);
         delete m_Auctions[_id];
+    }
+
+    function customReserve(address _address, uint256[] memory ids)
+        external
+        onlyOwner
+    {
+        for (uint256 i = 0; i < ids.length; i++) {
+            require(ids[i] <= MAX_SUPPLY);
+            require(!_exists(ids[i]), "Token id exists.");
+            if (m_BurnList[ids[i]]) m_BurnList[ids[i]] = false;
+
+            _safeMint(_address, ids[i]);
+        }
+    }
+
+    function burn(uint256 _tokenId) external onlyOwner {
+        _burn(_tokenId);
+        m_BurnList[_tokenId] = true;
     }
 
     // ######## EverLand Config #########
