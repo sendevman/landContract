@@ -30,6 +30,8 @@ contract EverLand is ERC721Enumerable, Ownable {
     bool private m_IsPublic = false;
     uint256 private m_SaleDate = 1648756800;
 
+    string private m_baseURI;
+
     uint256 private m_MarketingCommission = 25;
 
     struct Auction {
@@ -427,5 +429,13 @@ contract EverLand is ERC721Enumerable, Ownable {
 
     function getMarketingCommission() external view returns (uint256) {
         return m_MarketingCommission;
+    }
+
+    function setBaseURI(string memory _newBaseURI) external onlyOwner {
+        m_baseURI = _newBaseURI;
+    }
+
+    function _baseURI() internal view override returns (string memory) {
+        return m_baseURI;
     }
 }
