@@ -383,11 +383,6 @@ contract EverLand is ERC721Enumerable, Ownable {
     }
 
     // ######## EverLand Config #########
-
-    // function setBaseURI(string memory baseURI) external onlyOwner {
-    //     _setBaseURI(baseURI);
-    // }
-
     function getMaxSupply() external pure returns (uint256) {
         return MAX_SUPPLY;
     }
